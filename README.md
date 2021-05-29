@@ -1,18 +1,28 @@
-# Bilnn-Python-SDK
+# Light-MySQL
 
-这是基于比邻云盘官方API的一份Python打包版，拥有Webdav账号和密码后可方便登录使用。
+The improved-package of pymysql, made by Yixiangzhilv.
 
-安装：
-`pip3 install bilnn`
+## Install
 
-示例代码：
+`pip3 install lightmysql`
+
+## Example
+
 ```Python
 
-import bilnn
-pan = bilnn.Bilnn("abc@example.com", "PASSWORD")  # Bilnn("你的WebDav账号", "你的WebDav密码")
-print(pan.upload("D:/1.txt", "/1.txt"))  # pan.upload("本地文件路径", "云端保存路径"))
-print(pan.get_url("/1.txt"))  # pan.get_url("云端文件路径")
-print(pan.list_dir("/"))  # pan.list_dir("云端目录路径")
-print(pan.move("/1.txt", "/2.txt"))  # pan.move("云端原始文件或文件夹名", "云端更改后的文件或文件夹名")
-print(pan.delete("/2.txt"))  # pan.delete("云端文件路径")
+>>> import lightmysql
+>>> conn = lightmysql.Connect(host="127.0.0.1", user="root", password="", database="yxzl")
+连接到 127.0.0.1 / yxzl 成功！当前用户为：root
+>>> conn.insert("test", {"name": "Python-Test", "age": 15})
+>>> conn.get("test")
+[('Python-Test', 15)]
+>>> conn.update("test", changes={"age": "20"}, condition={"name": "Python-Test"})
+>>> conn.delete("test", condition={"name": "Python-Test"})
+
 ```
+
+Sorry, but in this version, you couldn't create a table with lightmysql.
+
+## Contact
+
+[mail@yixiangzhilv.com](mailto:mail@yixiangzhilv.com)
