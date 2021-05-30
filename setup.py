@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='lightmysql',
-    version='1.0.0',
+    version='1.0.1',
     description='The improved-package of pymysql.',
     py_modules=["lightmysql"],
 
 
     long_description="The improved-package of pymysql, made by Yixiangzhilv.",
-    url='https://github.com/Danny-Yxzl/',
+    url='https://github.com/Danny-Yxzl/lightmysql',
     author='Yixiangzhilv',
     author_email='mail@yixiangzhilv.com',
     classifiers=[
@@ -23,7 +23,7 @@ setup(
     keywords='sql mysql pymysql database',
     install_requires=['pymysql'],
     project_urls={
-        'Bug Reports': 'https://github.com/Danny-Yxzl/',
+        'Bug Reports': 'https://github.com/Danny-Yxzl/lightmysql/issues',
         'Say Thanks!': 'https://www.yixiangzhilv.com/',
-        'Source': 'https://github.com/Danny-Yxzl/',
+        'Source': 'https://github.com/Danny-Yxzl/lightmysql',
     })
