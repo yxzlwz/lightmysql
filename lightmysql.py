@@ -1,8 +1,12 @@
 import pymysql
 
 
-def try_int(s):
-    if type(s).__name__ == "int":
+VERSION = "1.0.1"
+
+
+def try_type(s):
+    # 若传入value（j）的类型为str，则在字符串内容两侧加入表示内容的引号
+    if type(s).__name__ != "str":
         return s
     else:
         if ((s.startswith("'") and s.endswith("'"))
@@ -12,13 +16,30 @@ def try_int(s):
             return "'%s'" % s
 
 
-def format_into_mysql(s: dict, name=""):
+def format_condition_into_mysql(s: dict, sp=" and ", prefix="where"):
+    """
+    格式化MySQL子句
+    name: MySQL子句的前缀（也就是转换后的任意前缀）
+    sp: MySQL条件之间的分隔符，可取" and "或" or "
+    """
     if not s:
+        # 传入字典为空，则无需设置查询条件
         return ""
     result = ""
     for i, j in s.items():
-        result += "%s=%s," % (i, try_int(j))
-    return name + " " + result[:-1]
+        t = try_type(j)
+        if type(t).__name__ in ["str", "int", "float"]:
+            # 这些类型无需处理即可直接传入
+            result += "%s=%s%s" % (i, t, sp)
+        elif type(t).__name__ == "list":
+            # 若字典当前项value为列表，则数据库的table中当前列（i）可对应当前value（j）列表中的任意一项
+            text = "("
+            for k in t:
+                text += "%s=%s or " % (i, try_type(k))
+            result += text[:-len(" or ")] + ")" + sp
+        else:
+            raise TypeError
+    return prefix + " " + result[:-len(sp)]
 
 
 class Connect:
@@ -29,6 +50,7 @@ class Connect:
                  database,
                  port=3306,
                  charset="utf8"):
+        # 连接和游标的初始化
         self.connect = pymysql.connect(host=host,
                                        user=user,
                                        password=password,
@@ -39,6 +61,7 @@ class Connect:
         self.cursor = self.connect.cursor()
 
     def run_code(self, code, return_result=True):
+        # 提交MySQL语句，并将返回结果存入list中
         self.cursor.execute(code)
         self.connect.commit()
         if not return_result:
@@ -50,61 +73,36 @@ class Connect:
             result = self.cursor.fetchone()
         return results
 
-    def get_all(self, table):
-        self.cursor.execute("select * from %s;" % table)
-        results = []
-        result = self.cursor.fetchone()
-        while result:
-            results.append(result)
-            result = self.cursor.fetchone()
-        return results
-
-    def get(self, table, target: list or str = [], condition: dict = {}):
-        if str(target) == target:
-            target = [target]
-        self.cursor.execute("select %s from %s %s;" %
-                            ((target and ", ".join(target)) or "*", table,
-                             format_into_mysql(condition, "where")))
-        results = []
-        result = self.cursor.fetchone()
-        while result:
-            results.append(result)
-            result = self.cursor.fetchone()
-        return results
-
-    def update(self, table, changes: dict = {}, condition: dict = {}):
-        changes = format_into_mysql(changes)
-        condition = format_into_mysql(condition, "where")
-        self.run_code("update %s set %s %s;" % (table, changes, condition))
-
     def insert(self, table: str, data: dict):
+        # 分别将字典的key和value格式化为SQL语句
         keys = str(tuple(data.keys())).replace("\"", "").replace("'", "")
         values = str(tuple(data.values()))
-        self.run_code("insert into %s %s values %s;" % (table, keys, values))
+        return self.run_code("INSERT INTO %s %s VALUES %s;" %
+                             (table, keys, values))
 
-    def delete(self, table, condition: dict):
-        condition = format_into_mysql(condition, "where")
-        self.run_code("delete from %s %s;" % (table, condition))
+    def get(self,
+            table,
+            target: list or str = [],
+            condition: dict = {},
+            condition_sp=" and "):
+        # 若只传入table，则语句等价于SELECT * FROM table;
+        if type(target).__name__ == "str":
+            target = [target]
+        condition = format_condition_into_mysql(condition, condition_sp)
+        return self.run_code(
+            "SELECT %s FROM %s %s;" %
+            ((target and ",".join(target)) or "*", table, condition))
 
+    def update(self,
+               table,
+               changes: dict = {},
+               condition: dict = {},
+               condition_sp=" and "):
+        changes = format_condition_into_mysql(changes, sp=",", prefix="")
+        condition = format_condition_into_mysql(condition, condition_sp)
+        return self.run_code("UPDATE %s SET %s %s;" %
+                             (table, changes, condition))
 
-if __name__ == "__main__":
-    conn = Connect(host="yxzlownserveraddress.yxzl.top",
-                   user="root",
-                   password="@yixiangzhilv",
-                   database="yxzl")
-
-
-    from icecream import ic
-
-    ic(conn.get("test", condition={"name": "Python-Auto-Test"}))
-
-    conn.insert("test", {"name": "Python-Auto-Test", "age": 15})
-    ic(conn.get("test", condition={"name": "Python-Auto-Test"}))
-
-    conn.update("test",
-                changes={"age": "20"},
-                condition={"name": "Python-Auto-Test"})
-    ic(conn.get("test", condition={"name": "Python-Auto-Test"}))
-
-    conn.delete("test", {"name": "Python-Auto-Test"})
-    ic(conn.get("test", condition={"name": "Python-Auto-Test"}))
+    def delete(self, table, condition: dict, condition_sp=" and "):
+        condition = format_condition_into_mysql(condition, condition_sp)
+        return self.run_code("DELETE FROM %s %s;" % (table, condition))
