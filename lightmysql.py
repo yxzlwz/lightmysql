@@ -1,7 +1,7 @@
 import pymysql
 
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 
 def try_type(s):
@@ -30,7 +30,7 @@ def format_condition_into_mysql(s: dict, sp="and", prefix="where"):
         t = try_type(j)
         if type(t).__name__ in ["str", "int", "float"]:
             # 这些类型无需处理即可直接传入
-            result += "%s=%s %s" % (i, t, sp)
+            result += "%s=%s %s " % (i, t, sp)
         elif type(t).__name__ == "list":
             # 若字典当前项value为列表，则数据库的table中当前列（i）可对应当前value（j）列表中的任意一项
             text = "("

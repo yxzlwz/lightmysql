@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='lightmysql',
-    version='1.0.2',
+    version='1.0.3',
     description='The improved-package of pymysql.',
     py_modules=["lightmysql"],
 
