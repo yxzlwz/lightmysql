@@ -1,7 +1,7 @@
 import pymysql
 
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 
 def try_type(s):
@@ -16,11 +16,11 @@ def try_type(s):
             return "'%s'" % s
 
 
-def format_condition_into_mysql(s: dict, sp=" and ", prefix="where"):
+def format_condition_into_mysql(s: dict, sp="and", prefix="where"):
     """
     格式化MySQL子句
     name: MySQL子句的前缀（也就是转换后的任意前缀）
-    sp: MySQL条件之间的分隔符，可取" and "或" or "
+    sp: MySQL条件之间的分隔符，可取"and"或"or"
     """
     if not s:
         # 传入字典为空，则无需设置查询条件
@@ -39,7 +39,7 @@ def format_condition_into_mysql(s: dict, sp=" and ", prefix="where"):
             result += text[:-len(" or ")] + ")" + sp
         else:
             raise TypeError
-    return prefix + " " + result[:-len(sp)]
+    return prefix + " " + result[:-len(sp) + 2]
 
 
 class Connect:
@@ -51,13 +51,19 @@ class Connect:
                  port=3306,
                  charset="utf8"):
         # 连接和游标的初始化
-        self.connect = pymysql.connect(host=host,
-                                       user=user,
-                                       password=password,
-                                       database=database,
-                                       port=port,
-                                       charset=charset)
-        print("连接到 %s / %s 成功！当前用户为：%s" % (host, database, user))
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+        self.port = port
+        self.charset = charset
+        self.connect = pymysql.connect(host=self.host,
+                                       user=self.user,
+                                       password=self.password,
+                                       database=self.database,
+                                       port=self.port,
+                                       charset=self.charset)
+        print("连接到 %s / %s 成功！当前用户为：%s" % (self.host, self.database, self.user))
         self.cursor = self.connect.cursor()
 
     def run_code(self, code, return_result=True):
@@ -84,7 +90,7 @@ class Connect:
             table,
             target: list or str = [],
             condition: dict = {},
-            condition_sp=" and "):
+            condition_sp="and"):
         # 若只传入table，则语句等价于SELECT * FROM table;
         if type(target).__name__ == "str":
             target = [target]
@@ -97,7 +103,7 @@ class Connect:
                table,
                changes: dict = {},
                condition: dict = {},
-               condition_sp=" and "):
+               condition_sp="and"):
         changes = format_condition_into_mysql(changes, sp=",", prefix="")
         condition = format_condition_into_mysql(condition, condition_sp)
         return self.run_code("UPDATE %s SET %s %s;" %
@@ -106,3 +112,21 @@ class Connect:
     def delete(self, table, condition: dict, condition_sp=" and "):
         condition = format_condition_into_mysql(condition, condition_sp)
         return self.run_code("DELETE FROM %s %s;" % (table, condition))
+
+    def restart(self):
+        # MySQL默认8小时清空一次session，所以请确认你在每八小时进行了一次restart
+        self.cursor.close()
+        self.connect.close()
+        self.connect = pymysql.connect(host=self.host,
+                                       user=self.user,
+                                       password=self.password,
+                                       database=self.database,
+                                       port=self.port,
+                                       charset=self.charset)
+        print("连接到 %s / %s 成功！当前用户为：%s" % (self.host, self.database, self.user))
+        self.cursor = self.connect.cursor()
+
+    def close(self):
+        self.cursor.close()
+        self.connect.close()
+        del(self)
