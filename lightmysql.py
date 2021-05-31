@@ -30,16 +30,16 @@ def format_condition_into_mysql(s: dict, sp="and", prefix="where"):
         t = try_type(j)
         if type(t).__name__ in ["str", "int", "float"]:
             # 这些类型无需处理即可直接传入
-            result += "%s=%s%s" % (i, t, sp)
+            result += "%s=%s %s" % (i, t, sp)
         elif type(t).__name__ == "list":
             # 若字典当前项value为列表，则数据库的table中当前列（i）可对应当前value（j）列表中的任意一项
             text = "("
             for k in t:
                 text += "%s=%s or " % (i, try_type(k))
-            result += text[:-len(" or ")] + ")" + sp
+            result += "%s) %s " % (text[:-len(" or ")], sp)
         else:
             raise TypeError
-    return prefix + " " + result[:-len(sp) + 2]
+    return prefix + " " + result[:-(len(sp) + 2)]
 
 
 class Connect:
