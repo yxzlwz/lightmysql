@@ -9,14 +9,10 @@ def try_type(s):
     if type(s).__name__ != "str":
         return s
     else:
-        if ((s.startswith("'") and s.endswith("'"))
-                or (s.startswith("\"") and s.endswith("\""))):
-            return s
-        else:
-            return "'%s'" % s
+        return "'%s'" % s
 
 
-def format_condition_into_mysql(s: dict, sp="and", prefix="where"):
+def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
     """
     格式化MySQL子句
     name: MySQL子句的前缀（也就是转换后的任意前缀）
@@ -109,7 +105,7 @@ class Connect:
         return self.run_code("UPDATE %s SET %s %s;" %
                              (table, changes, condition))
 
-    def delete(self, table, condition: dict, condition_sp=" and "):
+    def delete(self, table, condition: dict, condition_sp="and"):
         condition = format_condition_into_mysql(condition, condition_sp)
         return self.run_code("DELETE FROM %s %s;" % (table, condition))
 
@@ -130,3 +126,5 @@ class Connect:
         self.cursor.close()
         self.connect.close()
         del(self)
+
+    select = get
