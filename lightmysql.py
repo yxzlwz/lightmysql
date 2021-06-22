@@ -1,7 +1,7 @@
 import pymysql
+import time
 
-
-VERSION = "1.0.3"
+VERSION = "1.0.5"
 
 
 def try_type(s):
@@ -59,11 +59,14 @@ class Connect:
                                        database=self.database,
                                        port=self.port,
                                        charset=self.charset)
-        print("连接到 %s / %s 成功！当前用户为：%s" % (self.host, self.database, self.user))
+        print("连接到 %s / %s 成功！当前用户为：%s" %
+              (self.host, self.database, self.user))
         self.cursor = self.connect.cursor()
+        self.requested_time = time.time()
 
     def run_code(self, code, return_result=True):
         # 提交MySQL语句，并将返回结果存入list中
+        self.check_time()
         self.cursor.execute(code)
         self.connect.commit()
         if not return_result:
@@ -73,24 +76,27 @@ class Connect:
         while result:
             results.append(result)
             result = self.cursor.fetchone()
+        self.requested_time = time.time()
         return results
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
         keys = str(tuple(data.keys())).replace("\"", "").replace("'", "")
         values = str(tuple(data.values()))
+        self.requested_time = time.time()
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
 
-    def get(self,
-            table,
-            target: list or str = [],
-            condition: dict = {},
-            condition_sp="and"):
+    def select(self,
+               table,
+               target: list or str = [],
+               condition: dict = {},
+               condition_sp="and"):
         # 若只传入table，则语句等价于SELECT * FROM table;
         if type(target).__name__ == "str":
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
+        self.requested_time = time.time()
         return self.run_code(
             "SELECT %s FROM %s %s;" %
             ((target and ",".join(target)) or "*", table, condition))
@@ -102,12 +108,18 @@ class Connect:
                condition_sp="and"):
         changes = format_condition_into_mysql(changes, sp=",", prefix="")
         condition = format_condition_into_mysql(condition, condition_sp)
+        self.requested_time = time.time()
         return self.run_code("UPDATE %s SET %s %s;" %
                              (table, changes, condition))
 
     def delete(self, table, condition: dict, condition_sp="and"):
         condition = format_condition_into_mysql(condition, condition_sp)
+        self.requested_time = time.time()
         return self.run_code("DELETE FROM %s %s;" % (table, condition))
+
+    def check_time(self):
+        if time.time() - self.requested_time > 3600:
+            self.restart()
 
     def restart(self):
         # MySQL默认8小时清空一次session，所以请确认你在每八小时进行了一次restart
@@ -119,7 +131,8 @@ class Connect:
                                        database=self.database,
                                        port=self.port,
                                        charset=self.charset)
-        print("连接到 %s / %s 成功！当前用户为：%s" % (self.host, self.database, self.user))
+        print("连接到 %s / %s 成功！当前用户为：%s" %
+              (self.host, self.database, self.user))
         self.cursor = self.connect.cursor()
 
     def close(self):
@@ -127,4 +140,4 @@ class Connect:
         self.connect.close()
         del(self)
 
-    select = get
+    get = select
