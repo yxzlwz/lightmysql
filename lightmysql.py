@@ -1,8 +1,6 @@
 import pymysql
 import time
 
-VERSION = "1.0.5"
-
 
 def try_type(s):
     # 若传入value（j）的类型为str，则在字符串内容两侧加入表示内容的引号
@@ -81,7 +79,7 @@ class Connect:
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
-        keys = "(" + ", ".join(t for t in data.keys()) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
+        keys = "(" + ", ".join("`%s`" % t for t in data.keys()) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
         values = "(" + ", ".join(("\"%s\"" % t) for t in data.values()) + ")"  # str(tuple(data.values()))
         self.requested_time = time.time()
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
@@ -99,7 +97,7 @@ class Connect:
         self.requested_time = time.time()
         return self.run_code(
             "SELECT %s FROM %s %s;" %
-            ((target and ",".join(target)) or "*", table, condition))
+            ((target and "`" + "`,`".join(target) + "`") or "*", table, condition))
 
     def update(self,
                table,
