@@ -24,12 +24,12 @@ def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
         t = try_type(j)
         if type(t).__name__ in ["str", "int", "float"]:
             # 这些类型无需处理即可直接传入
-            result += "%s=%s %s " % (i, t, sp)
+            result += "`%s`=%s %s " % (i, t, sp)
         elif type(t).__name__ == "list":
             # 若字典当前项value为列表，则数据库的table中当前列（i）可对应当前value（j）列表中的任意一项
             text = "("
             for k in t:
-                text += "%s=%s or " % (i, try_type(k))
+                text += "`%s`=%s or " % (i, try_type(k))
             result += "%s) %s " % (text[:-len(" or ")], sp)
         else:
             raise TypeError
@@ -89,15 +89,18 @@ class Connect:
                table,
                target: list or str = [],
                condition: dict = {},
-               condition_sp="and"):
+               condition_sp="and",
+               limit=""):
         # 若只传入table，则语句等价于SELECT * FROM table;
         if type(target).__name__ == "str":
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
         self.requested_time = time.time()
+        if limit:
+            limit = "limit " + limit
         return self.run_code(
-            "SELECT %s FROM %s %s;" %
-            ((target and "`" + "`,`".join(target) + "`") or "*", table, condition))
+            "SELECT %s FROM %s %s %s;" %
+            ((target and "`" + "`,`".join(target) + "`") or "*", table, condition, limit))
 
     def update(self,
                table,
