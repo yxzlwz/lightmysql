@@ -81,8 +81,8 @@ class Connect:
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
-        keys = str(tuple(data.keys())).replace("\"", "").replace("'", "")
-        values = str(tuple(data.values()))
+        keys = "(" + ", ".join(t for t in data.keys()) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
+        values = "(" + ", ".join(("\"%s\"" % t) for t in data.values()) + ")"  # str(tuple(data.values()))
         self.requested_time = time.time()
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
