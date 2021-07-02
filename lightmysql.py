@@ -62,20 +62,26 @@ class Connect:
         self.cursor = self.connect.cursor()
         self.requested_time = time.time()
 
-    def run_code(self, code, return_result=True):
+    def run_code(self, code, return_result=True, twice=False):
         # 提交MySQL语句，并将返回结果存入list中
-        self.check_time()
-        self.cursor.execute(code)
-        self.connect.commit()
-        if not return_result:
-            return
-        results = []
-        result = self.cursor.fetchone()
-        while result:
-            results.append(result)
+        try:
+            self.check_time()
+            self.cursor.execute(code)
+            self.connect.commit()
+            if not return_result:
+                return
+            results = []
             result = self.cursor.fetchone()
-        self.requested_time = time.time()
-        return results
+            while result:
+                results.append(result)
+                result = self.cursor.fetchone()
+            self.requested_time = time.time()
+            return results
+        except:
+            if twice:
+                return []
+            self.restart()
+            return self.run_code(code, return_result=return_result, twice=True)
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
