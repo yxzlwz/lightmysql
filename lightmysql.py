@@ -141,7 +141,7 @@ class Connect:
 
     def restart(self):
         # MySQL默认8小时清空一次session，所以请确认你在每八小时进行了一次restart
-        self.pool = pymysqlpool.ConnectionPool(size=100,
+        self.pool = pymysqlpool.ConnectionPool(size=self.pool_size,
                                                name="pool",
                                                host=self.host,
                                                user=self.user,
