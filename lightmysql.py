@@ -1,4 +1,5 @@
 import pymysql
+import pymysqlpool
 import time
 
 
@@ -43,7 +44,8 @@ class Connect:
                  password,
                  database,
                  port=3306,
-                 charset="utf8"):
+                 charset="utf8",
+                 pool_size=10):
         # 连接和游标的初始化
         self.host = host
         self.user = user
@@ -51,33 +53,39 @@ class Connect:
         self.database = database
         self.port = port
         self.charset = charset
-        self.connect = pymysql.connect(host=self.host,
-                                       user=self.user,
-                                       password=self.password,
-                                       database=self.database,
-                                       port=self.port,
-                                       charset=self.charset)
+        self.pool_size = pool_size
+        self.pool = pymysqlpool.ConnectionPool(size=self.pool_size,
+                                               name="pool",
+                                               host=self.host,
+                                               user=self.user,
+                                               password=self.password,
+                                               database=self.database,
+                                               port=self.port,
+                                               charset=self.charset)
         print("连接到 %s / %s 成功！当前用户为：%s" %
               (self.host, self.database, self.user))
-        self.cursor = self.connect.cursor()
         self.requested_time = time.time()
 
     def run_code(self, code, return_result=True, twice=False):
         # 提交MySQL语句，并将返回结果存入list中
         try:
             self.check_time()
-            self.cursor.execute(code)
-            self.connect.commit()
+            connect = self.pool.get_connection()
+            cursor = connect.cursor()
+            cursor.execute(code)
+            connect.commit()
             if not return_result:
-                return
+                return None
             results = []
-            result = self.cursor.fetchone()
+            result = cursor.fetchone()
             while result:
                 results.append(result)
-                result = self.cursor.fetchone()
+                result = cursor.fetchone()
             self.requested_time = time.time()
+            connect.close()
             return results
         except:
+            connect.close()
             if twice:
                 return []
             self.restart()
@@ -85,8 +93,11 @@ class Connect:
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
-        keys = "(" + ", ".join("`%s`" % t for t in data.keys()) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
-        values = "(" + ", ".join(("\"%s\"" % t) for t in data.values()) + ")"  # str(tuple(data.values()))
+        keys = "(" + ", ".join("`%s`" % t for t in data.keys(
+        )) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
+        values = "(" + ", ".join(
+            ("\"%s\"" % t)
+            for t in data.values()) + ")"  # str(tuple(data.values()))
         self.requested_time = time.time()
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
@@ -104,9 +115,9 @@ class Connect:
         self.requested_time = time.time()
         if limit:
             limit = "limit " + limit
-        return self.run_code(
-            "SELECT %s FROM %s %s %s;" %
-            ((target and "`" + "`,`".join(target) + "`") or "*", table, condition, limit))
+        return self.run_code("SELECT %s FROM %s %s %s;" %
+                             ((target and "`" + "`,`".join(target) + "`")
+                              or "*", table, condition, limit))
 
     def update(self,
                table,
@@ -130,21 +141,18 @@ class Connect:
 
     def restart(self):
         # MySQL默认8小时清空一次session，所以请确认你在每八小时进行了一次restart
-        self.cursor.close()
-        self.connect.close()
-        self.connect = pymysql.connect(host=self.host,
-                                       user=self.user,
-                                       password=self.password,
-                                       database=self.database,
-                                       port=self.port,
-                                       charset=self.charset)
+        self.pool = pymysqlpool.ConnectionPool(size=100,
+                                               name="pool",
+                                               host=self.host,
+                                               user=self.user,
+                                               password=self.password,
+                                               database=self.database,
+                                               port=self.port,
+                                               charset=self.charset)
         print("连接到 %s / %s 成功！当前用户为：%s" %
               (self.host, self.database, self.user))
-        self.cursor = self.connect.cursor()
 
     def close(self):
-        self.cursor.close()
-        self.connect.close()
-        del(self)
+        del (self)
 
     get = select
