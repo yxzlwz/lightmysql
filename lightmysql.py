@@ -5,10 +5,10 @@ import time
 
 def try_type(s):
     # 若传入value（j）的类型为str，则在字符串内容两侧加入表示内容的引号
-    if type(s).__name__ != "str":
+    if type(s) != str:
         return s
     else:
-        return "'%s'" % s
+        return "\"%s\"" % s.replace("\"", "\\\"")
 
 
 def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
@@ -23,10 +23,10 @@ def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
     result = ""
     for i, j in s.items():
         t = try_type(j)
-        if type(t).__name__ in ["str", "int", "float"]:
+        if type(t) in [str, int, float]:
             # 这些类型无需处理即可直接传入
             result += "`%s`=%s %s " % (i, t, sp)
-        elif type(t).__name__ == "list":
+        elif type(t) == list:
             # 若字典当前项value为列表，则数据库的table中当前列（i）可对应当前value（j）列表中的任意一项
             text = "("
             for k in t:
@@ -64,7 +64,7 @@ class Connect:
                                                charset=self.charset)
         print("连接到 %s / %s 成功！当前用户为：%s" %
               (self.host, self.database, self.user))
-        self.requested_time = time.time()
+        self.connected_time = time.time()
 
     def run_code(self, code, return_result=True, twice=False):
         # 提交MySQL语句，并将返回结果存入list中
@@ -81,9 +81,10 @@ class Connect:
             while result:
                 results.append(result)
                 result = cursor.fetchone()
-            self.requested_time = time.time()
             connect.close()
             return results
+        except pymysql.err.ProgrammingError:
+            return ["You have an error in your SQL syntax.", "您的SQL语法有错误。"]
         except:
             connect.close()
             if twice:
@@ -94,11 +95,10 @@ class Connect:
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
         keys = "(" + ", ".join("`%s`" % t for t in data.keys(
-        )) + ")"  # str(tuple(data.keys())).replace("\"", "").replace("'", "")
+        )) + ")"
         values = "(" + ", ".join(
-            ("\"%s\"" % t)
-            for t in data.values()) + ")"  # str(tuple(data.values()))
-        self.requested_time = time.time()
+            ("\"%s\"" % (t.replace("\"", "\\\"") if type(t) == str else t))
+            for t in data.values()) + ")"
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
 
@@ -112,7 +112,6 @@ class Connect:
         if type(target).__name__ == "str":
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
-        self.requested_time = time.time()
         if limit:
             limit = "limit " + limit
         return self.run_code("SELECT %s FROM %s %s %s;" %
@@ -126,21 +125,19 @@ class Connect:
                condition_sp="and"):
         changes = format_condition_into_mysql(changes, sp=",", prefix="")
         condition = format_condition_into_mysql(condition, condition_sp)
-        self.requested_time = time.time()
         return self.run_code("UPDATE %s SET %s %s;" %
                              (table, changes, condition))
 
     def delete(self, table, condition: dict, condition_sp="and"):
         condition = format_condition_into_mysql(condition, condition_sp)
-        self.requested_time = time.time()
         return self.run_code("DELETE FROM %s %s;" % (table, condition))
 
     def check_time(self):
-        if time.time() - self.requested_time > 3600:
+        if time.time() - self.connected_time > 7200:
             self.restart()
 
     def restart(self):
-        # MySQL默认8小时清空一次session，所以请确认你在每八小时进行了一次restart
+        # MySQL默认8小时清空一次session，所以请确认你在每8小时进行了一次restart
         self.pool = pymysqlpool.ConnectionPool(size=self.pool_size,
                                                name="pool",
                                                host=self.host,
