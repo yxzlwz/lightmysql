@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='lightmysql',
-    version='1.1.2',
+    version='1.1.3.1',
     description='The improved-package of pymysql.',
     py_modules=["lightmysql"],
 
@@ -21,7 +21,7 @@ setup(
         'Programming Language :: Python :: 3.9'
     ],
     keywords='sql mysql pymysql database',
-    install_requires=['pymysql', "pymysql-pool==0.3.4"],
+    install_requires=['pymysql==1.0.2', "pymysql-pool==0.3.4"],
     project_urls={
         'Bug Reports': 'https://github.com/Danny-Yxzl/lightmysql/issues',
         'Say Thanks!': 'https://www.yixiangzhilv.com/',

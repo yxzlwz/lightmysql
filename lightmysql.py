@@ -8,7 +8,7 @@ def try_type(s):
     if type(s) != str:
         return s
     else:
-        return "\"%s\"" % s.replace("\"", "\\\"")
+        return "\"%s\"" % pymysql.converters.escape_string(s)
 
 
 def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
@@ -94,11 +94,8 @@ class Connect:
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
-        keys = "(" + ", ".join("`%s`" % t for t in data.keys(
-        )) + ")"
-        values = "(" + ", ".join(
-            ("\"%s\"" % (t.replace("\"", "\\\"") if type(t) == str else t))
-            for t in data.values()) + ")"
+        keys = "(" + ", ".join("`%s`" % t for t in data.keys()) + ")"
+        values = "(" + ", ".join(try_type(t) for t in data.values()) + ")"
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
 
