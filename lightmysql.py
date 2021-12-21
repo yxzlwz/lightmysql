@@ -95,7 +95,7 @@ class Connect:
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
         keys = "(" + ", ".join("`%s`" % t for t in data.keys()) + ")"
-        values = "(" + ", ".join(try_type(t) for t in data.values()) + ")"
+        values = "(" + ", ".join([str(try_type(t)) for t in data.values()]) + ")"
         return self.run_code("INSERT INTO %s %s VALUES %s;" %
                              (table, keys, values))
 
@@ -110,7 +110,7 @@ class Connect:
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
         if limit:
-            limit = "limit " + limit
+            limit = "limit " + str(limit)
         return self.run_code("SELECT %s FROM %s %s %s;" %
                              ((target and "`" + "`,`".join(target) + "`")
                               or "*", table, condition, limit))
