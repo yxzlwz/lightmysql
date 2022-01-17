@@ -132,6 +132,7 @@ class Connect:
     def check_time(self):
         if time.time() - self.connected_time > 7200:
             self.restart()
+            self.connected_time = time.time()
 
     def restart(self):
         # MySQL默认8小时清空一次session，所以请确认你在每8小时进行了一次restart
