@@ -95,25 +95,30 @@ class Connect:
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
         keys = "(" + ", ".join("`%s`" % t for t in data.keys()) + ")"
-        values = "(" + ", ".join([str(try_type(t)) for t in data.values()]) + ")"
-        return self.run_code("INSERT INTO %s %s VALUES %s;" %
-                             (table, keys, values))
+        values = "(" + ", ".join([str(try_type(t))
+                                  for t in data.values()]) + ")"
+        return self.run_code(f"INSERT INTO {table} {keys} VALUES {values};")
 
     def select(self,
                table,
                target: list or str = [],
                condition: dict = {},
                condition_sp="and",
-               limit=""):
+               limit="",
+               order_by="",
+               order_sort=""):
         # 若只传入table，则语句等价于SELECT * FROM table;
         if type(target).__name__ == "str":
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
         if limit:
             limit = "limit " + str(limit)
-        return self.run_code("SELECT %s FROM %s %s %s;" %
-                             ((target and "`" + "`,`".join(target) + "`")
-                              or "*", table, condition, limit))
+        order = ""
+        if order_by and order_sort:
+            order = f"order by {order_by} {order_sort}"
+        return self.run_code(
+            f"SELECT {target and '`' + '`,`'.join(target) + '`' or '*'} FROM {table} {condition} {limit} {order};"
+        )
 
     def update(self,
                table,
@@ -122,12 +127,11 @@ class Connect:
                condition_sp="and"):
         changes = format_condition_into_mysql(changes, sp=",", prefix="")
         condition = format_condition_into_mysql(condition, condition_sp)
-        return self.run_code("UPDATE %s SET %s %s;" %
-                             (table, changes, condition))
+        return self.run_code(f"UPDATE {table} SET {changes} {condition};")
 
     def delete(self, table, condition: dict, condition_sp="and"):
         condition = format_condition_into_mysql(condition, condition_sp)
-        return self.run_code("DELETE FROM %s %s;" % (table, condition))
+        return self.run_code(f"DELETE FROM {table} {condition};")
 
     def check_time(self):
         if time.time() - self.connected_time > 7200:
