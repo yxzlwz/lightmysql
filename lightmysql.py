@@ -11,7 +11,7 @@ def try_type(s):
         return "\"%s\"" % pymysql.converters.escape_string(s)
 
 
-def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE"):
+def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE BINARY"):
     """
     格式化MySQL子句
     name: MySQL子句的前缀（也就是转换后的任意前缀）
@@ -112,12 +112,12 @@ class Connect:
             target = [target]
         condition = format_condition_into_mysql(condition, condition_sp)
         if limit:
-            limit = "limit " + str(limit)
+            limit = "LIMIT " + str(limit)
         order = ""
         if order_by and order_sort:
-            order = f"order by {order_by} {order_sort}"
+            order = f"ORDER BY `{order_by}` {order_sort}"
         return self.run_code(
-            f"SELECT {target and '`' + '`,`'.join(target) + '`' or '*'} FROM {table} {condition} {limit} {order};"
+            f"SELECT {target and '`' + '`,`'.join(target) + '`' or '*'} FROM {table} {condition} {order} {limit};"
         )
 
     def update(self,
