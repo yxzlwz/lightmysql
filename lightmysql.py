@@ -38,6 +38,7 @@ def format_condition_into_mysql(s: dict, sp="and", prefix="WHERE BINARY"):
 
 
 class Connect:
+
     def __init__(self,
                  host,
                  user,
@@ -66,31 +67,22 @@ class Connect:
               (self.host, self.database, self.user))
         self.connected_time = time.time()
 
-    def run_code(self, code, return_result=True, twice=False):
+    def run_code(self, code, return_result=True):
         # 提交MySQL语句，并将返回结果存入list中
-        try:
-            self.check_time()
-            connect = self.pool.get_connection()
-            cursor = connect.cursor()
-            cursor.execute(code)
-            connect.commit()
-            if not return_result:
-                return None
-            results = []
+        self.check_time()
+        connect = self.pool.get_connection()
+        cursor = connect.cursor()
+        cursor.execute(code)
+        connect.commit()
+        if not return_result:
+            return
+        results = []
+        result = cursor.fetchone()
+        while result:
+            results.append(result)
             result = cursor.fetchone()
-            while result:
-                results.append(result)
-                result = cursor.fetchone()
-            connect.close()
-            return results
-        except pymysql.err.ProgrammingError:
-            return ["You have an error in your SQL syntax.", "您的SQL语法有错误。"]
-        except:
-            connect.close()
-            if twice:
-                return []
-            self.restart()
-            return self.run_code(code, return_result=return_result, twice=True)
+        connect.close()
+        return results
 
     def insert(self, table: str, data: dict):
         # 分别将字典的key和value格式化为SQL语句
